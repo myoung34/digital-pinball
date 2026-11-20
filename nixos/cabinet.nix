@@ -17,7 +17,7 @@
     tablerotation = 270
 
     [Settings]
-    vpxbinpath = /run/current-system/sw/bin/VPinballX_GL
+    vpxbinpath = /run/current-system/sw/bin/VPinballX_BGFX
     tablerootdir = ${home}/tables
     # No keyring on this machine (see gnome-keyring below).
     chromeoptions = --password-store=basic
@@ -29,9 +29,13 @@
     joyback = 10
     joymenu = 2
   '';
-  # Index new table folders (metadata + art) before showing the wheel.
+  # Index new table folders (metadata + art) before showing the wheel, and
+  # build a static backglass for tables that don't ship one.
   launcher = pkgs.writeShellScript "vpinfe-cabinet" ''
+    # The compositor adds a frame of latency; nothing here needs it.
+    ${pkgs.xfconf}/bin/xfconf-query -c xfwm4 -p /general/use_compositing -s false || true
     ${pinballPkgs.vpinfe}/bin/vpinfe --buildmeta
+    ${pinballPkgs.make-directb2s}/bin/make-directb2s ${home}/tables
     exec ${pinballPkgs.vpinfe}/bin/vpinfe
   '';
 in {
