@@ -6,6 +6,7 @@
 }: let
   pinballPkgs = import ../pkgs pkgs;
   home = config.users.users.pinball.home;
+  pindmd3 = "/dev/serial/by-id/usb-VirtuaPin_VirtuaPin_PinDMD3_4294967295-if00";
 
   vpinfeIni = pkgs.writeText "vpinfe.ini" ''
     [Displays]
@@ -22,6 +23,11 @@
     # No keyring on this machine (see gnome-keyring below).
     chromeoptions = --password-store=basic
 
+    [Media]
+    # The Revolution theme rotates table videos before it knows the cabinet
+    # rotation, so they come up sideways; still images are rotated correctly.
+    tablemediapriority = image
+
     [Input]
     joyleft = 9
     joyright = 1
@@ -34,6 +40,10 @@
   launcher = pkgs.writeShellScript "vpinfe-cabinet" ''
     # The compositor adds a frame of latency; nothing here needs it.
     ${pkgs.xfconf}/bin/xfconf-query -c xfwm4 -p /general/use_compositing -s false || true
+    # Revolution theme bug: its wheel wraps with a plain %, so with fewer than
+    # 3 tables a negative index reads past the list and the wheel stops moving.
+    theme=${home}/.config/vpinfe/themes/Revolution/theme.js
+    [ -f "$theme" ] && ${pkgs.gnused}/bin/sed -i 's|return (index + length) % length;|return ((index % length) + length) % length;|' "$theme"
     ${pinballPkgs.vpinfe}/bin/vpinfe --buildmeta
     ${pinballPkgs.make-directb2s}/bin/make-directb2s ${home}/tables
     exec ${pinballPkgs.vpinfe}/bin/vpinfe
@@ -85,7 +95,11 @@ in {
     description = "libdmdutil DMD server (PinDMD3)";
     wantedBy = ["multi-user.target"];
     serviceConfig = {
+      # A warm reboot can leave the DMD mid-frame; resync it or it shows garbage.
+      ExecStartPre = "${pinballPkgs.pindmd3-resync}/bin/pindmd3-resync ${pindmd3}";
       ExecStart = "${pinballPkgs.dmdserver}/bin/dmdserver --config=${./cabinet/dmdserver.ini} --wait-for-displays --logging";
+      # Placeholder shown on the wheel and after each game (buffered frame).
+      ExecStartPost = "${pinballPkgs.dmd-placeholder}/bin/dmd-placeholder";
       DynamicUser = true;
       SupplementaryGroups = ["dialout"];
       Restart = "always";
