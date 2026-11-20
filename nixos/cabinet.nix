@@ -6,6 +6,7 @@
 }: let
   pinballPkgs = import ../pkgs pkgs;
   home = config.users.users.pinball.home;
+  pindmd3 = "/dev/serial/by-id/usb-VirtuaPin_VirtuaPin_PinDMD3_4294967295-if00";
 
   vpinfeIni = pkgs.writeText "vpinfe.ini" ''
     [Displays]
@@ -85,7 +86,11 @@ in {
     description = "libdmdutil DMD server (PinDMD3)";
     wantedBy = ["multi-user.target"];
     serviceConfig = {
+      # A warm reboot can leave the DMD mid-frame; resync it or it shows garbage.
+      ExecStartPre = "${pinballPkgs.pindmd3-resync}/bin/pindmd3-resync ${pindmd3}";
       ExecStart = "${pinballPkgs.dmdserver}/bin/dmdserver --config=${./cabinet/dmdserver.ini} --wait-for-displays --logging";
+      # Placeholder shown on the wheel and after each game (buffered frame).
+      ExecStartPost = "${pinballPkgs.dmd-placeholder}/bin/dmd-placeholder";
       DynamicUser = true;
       SupplementaryGroups = ["dialout"];
       Restart = "always";
