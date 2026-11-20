@@ -44,6 +44,10 @@ in {
     modesetting.enable = true;
   };
 
+  # The playfield TV is mounted with its bottom edge at the backbox end. VPX's
+  # cabinet autofit always draws for the other way round, so flip the output.
+  services.xserver.displayManager.setupCommands = "${pkgs.xrandr}/bin/xrandr --output DP-1 --rotate inverted";
+
   # Never blank the screens.
   services.xserver.serverFlagsSection = ''
     Option "BlankTime" "0"
@@ -57,9 +61,21 @@ in {
   services.gnome.gnome-keyring.enable = false;
 
   environment.systemPackages = [pinballPkgs.vpinball pinballPkgs.vpinfe];
+  services.unclutter-xfixes.enable = true; # hide the mouse cursor
 
   # PinDMD3 is a USB serial device (/dev/ttyACM0, group dialout).
   users.users.pinball.extraGroups = ["dialout"];
+
+  # Fixes the VirtuaPin plunger axis (see pkgs/virtuapin-fix.py).
+  hardware.uinput.enable = true;
+  systemd.services.virtuapin-fix = {
+    description = "VirtuaPin Controller with signed axes";
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      ExecStart = "${pinballPkgs.virtuapin-fix}/bin/virtuapin-fix";
+      Restart = "always";
+    };
+  };
 
   systemd.services.dmdserver = {
     description = "libdmdutil DMD server (PinDMD3)";

@@ -13,6 +13,10 @@
 
     packages.x86_64-linux = import ./pkgs pkgs;
 
+    checks.x86_64-linux.virtuapin-fix = pkgs.runCommand "virtuapin-fix-test" {} ''
+      ${pkgs.python3}/bin/python ${./pkgs/virtuapin-fix_test.py} ${./pkgs/virtuapin-fix.py} && touch $out
+    '';
+
     nixosConfigurations.pinball = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
