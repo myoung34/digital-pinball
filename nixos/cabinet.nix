@@ -35,6 +35,10 @@
   launcher = pkgs.writeShellScript "vpinfe-cabinet" ''
     # The compositor adds a frame of latency; nothing here needs it.
     ${pkgs.xfconf}/bin/xfconf-query -c xfwm4 -p /general/use_compositing -s false || true
+    # Revolution theme bug: its wheel wraps with a plain %, so with fewer than
+    # 3 tables a negative index reads past the list and the wheel stops moving.
+    theme=${home}/.config/vpinfe/themes/Revolution/theme.js
+    [ -f "$theme" ] && ${pkgs.gnused}/bin/sed -i 's|return (index + length) % length;|return ((index % length) + length) % length;|' "$theme"
     ${pinballPkgs.vpinfe}/bin/vpinfe --buildmeta
     ${pinballPkgs.make-directb2s}/bin/make-directb2s ${home}/tables
     exec ${pinballPkgs.vpinfe}/bin/vpinfe
