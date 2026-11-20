@@ -23,6 +23,11 @@
     # No keyring on this machine (see gnome-keyring below).
     chromeoptions = --password-store=basic
 
+    [Media]
+    # The Revolution theme rotates table videos before it knows the cabinet
+    # rotation, so they come up sideways; still images are rotated correctly.
+    tablemediapriority = image
+
     [Input]
     joyleft = 9
     joyright = 1

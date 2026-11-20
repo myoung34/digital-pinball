@@ -16,17 +16,10 @@ def report(x, y, z, buttons):
 
 class Decode(unittest.TestCase):
     def test_pulled_plunger_is_positive(self):
-        axes, _ = fix.decode(report(0, 0, 31371, 0))
-        self.assertEqual(axes[2], 31371)
+        self.assertEqual(fix.decode(report(0, 0, 31371, 0))[2], 31371)
 
     def test_plunger_past_rest_is_negative(self):
-        axes, _ = fix.decode(report(-512, 512, -12532, 0))
-        self.assertEqual(axes, [-512, 512, -12532])
-
-    def test_launch_button_is_index_15(self):
-        _, buttons = fix.decode(report(0, 0, 0, 0x8000))
-        self.assertEqual(buttons.index(1), 15)
-        self.assertEqual(sum(buttons), 1)
+        self.assertEqual(fix.decode(report(-512, 512, -12532, 0x8000)), [-512, 512, -12532])
 
 
 if __name__ == "__main__":

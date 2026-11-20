@@ -5,6 +5,10 @@
 # when it springs past rest. Linux drops/mangles those, so VPX never sees the
 # analog plunger. Reading hidraw also keeps the board from resetting itself
 # every few seconds when nothing polls it.
+#
+# Only the axes are republished. Buttons stay on the real device: a second copy
+# makes VPinFE (Chromium) see every press twice, which skips wheel entries and
+# relaunches a table right after it exits.
 import glob
 import os
 import time
@@ -12,7 +16,9 @@ import time
 from evdev import AbsInfo, UInput, ecodes as e
 
 NAME = "VirtuaPin Controller"
-BUTTONS = list(range(e.BTN_TRIGGER, e.BTN_TRIGGER + 16))  # 288..303, same order as the real device
+# Declared but never pressed: udev only tags the device as a joystick (so SDL
+# sees it) when it has joystick buttons.
+BUTTONS = list(range(e.BTN_TRIGGER, e.BTN_TRIGGER + 16))
 AXIS = AbsInfo(value=0, min=-32768, max=32767, fuzz=0, flat=0, resolution=0)
 AXES = [e.ABS_X, e.ABS_Y, e.ABS_Z]
 
@@ -26,9 +32,7 @@ def find_hidraw():
 
 
 def decode(report):
-    axes = [int.from_bytes(report[i : i + 2], "little", signed=True) for i in (0, 2, 4)]
-    buttons = int.from_bytes(report[6:8], "little")
-    return axes, [(buttons >> i) & 1 for i in range(16)]
+    return [int.from_bytes(report[i : i + 2], "little", signed=True) for i in (0, 2, 4)]
 
 
 def main():
@@ -54,11 +58,8 @@ def main():
                 report = os.read(fd, 64)
                 if len(report) < 8:
                     continue
-                axes, buttons = decode(report)
-                for code, value in zip(AXES, axes):
+                for code, value in zip(AXES, decode(report)):
                     ui.write(e.EV_ABS, code, value)
-                for code, value in zip(BUTTONS, buttons):
-                    ui.write(e.EV_KEY, code, value)
                 ui.syn()
         except OSError:
             pass  # device reset or unplugged; reopen
